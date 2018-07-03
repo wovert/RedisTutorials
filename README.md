@@ -1,22 +1,39 @@
 # redis 介绍
+
 ## redis
 - k/v cache and store
-	+ in-memory
-	+ 持久化
-	+ 主从(借助于sentinel实现一定意义上的HA)
-	+ Clustering(分布式)
+  - in-memory
+  - 持久化
+  - 主从(借助于sentinel实现一定意义上的HA)
+  - Clustering(分布式)
 - 数据结构服务器
-	+ String,List, Hash, Set, Sorted Set, Bitmaps, Hyperloglogs
+  - String,List, Hash, Set, Sorted Set, Bitmaps, Hyperloglogs
 
 ## redis 的发展史
+
 > Redis, Remote Directory Server 远程服务器字典
+
+Salvatore Sanfilippo(Antirez)，意大利人，出生并居住在西西里岛，个人网站 http://invece.org/
+
+早年系统管理员，关注计算机安全领域，于 1999年发明了idle scan 扫描技术，该技术现在 nmap 扫描器上也有实现。
+
+2004-2006年期间在做嵌入式方面的工作，并为此写了名为 Jim 的 Tcl 解释器，《Tcl Wise: Guide to the Tcl programming language》一书以及《Tcl the Misunderstood》文档。（Redis 的时间处理器就重写自 Jim 的事件循环，而 Redis 的测试套件也使用 Tcl 语言来写的）。除此之外。他在 2006 还写了 Hping - 一个 TCP/IP 包分析器。
+
+之后开始接触 web, 在 2007年和另一个朋友共同创建了 LLOOGG.com，并因为解决这个网站的负载问题而在 2009-02-26 发明了 Redis。
+
 意大利创业公司，使用mysql性能问题，C语言编写
 数据缓存在内存中，普通电脑一秒读取10万个键值对儿
 问题：断电、程序关闭，数据丢失
 解决：数据持久化
 
+LLOOGG.com
+
+一个访客信息追踪网站，网站可以通过 JavaScript 脚本，将访客的 IP 地址、所属国家、阅读器信息、被访问页面的地址等数据传送给LLOOGG.com
+
+然后 LLOOGG.com 会将这些浏览数据通过 web 页面实时地展示给用户，并存储起最新的5至10，000条浏览记录以便进行查阅。
 
 ## redis优势
+
 - 内建replication及cluster
 - 就地更新（in-place update）操作
 - 支持持久化
@@ -63,30 +80,40 @@
 [redis官网](http://redis.io/download)
 
 ### 1. 下载
+
 `# cd /usr/local/src && wget http://download.redis.io/releases/redis-3.2.10.tar.gz`
 
 ### 2. 解压安装
-`# tar xvf redis-3.2.10.tar.gz && cd redis-3.2.10`
-`# make && make install`
+
+```
+# tar xvf redis-3.2.10.tar.gz && cd redis-3.2.10
+# make && make install
+```
 
 ### 3. /usr/local/bin可执行程序
+
 - redis-cli: 命令行客户端
 - redis-server: Redis服务器端
 - redis-benchmark: Redis性能测试工具
 - redis-check-aof: AOF文件修复工具
-	+ Corrupted RDB
+  - Corrupted RDB
 - redis-check-dump: RDB文件检测工具
-	+ AOF files utilties
+  - AOF files utilties
 
 ### 4. 安装目录下修改Redis配置文件redis.conf并安装复制到/etc/目录下 
+
 `# vi redis.conf`
+
 > daemonize yes 以守护进程的方式使用
 
 `# cp redis.conf /etc/`
 
 ###　5. 启动服务，指定配置文件
-`# service redis start`
-`# redis-server /etc/redis.conf`
+
+```
+# service redis start
+# redis-server /etc/redis.conf
+```
 
 ###　6. 连接服务器
 `# redis-cli`
@@ -98,25 +125,25 @@
 `ping`
 
 ### 7. 停止服务redis
-- 客户端连接服务后
-`> shutdown`
 
-- 关闭进程
-`# killall redis-server`
+- 客户端连接服务后: `> shutdown`
+
+- 关闭进程: `# killall redis-server`
 
 ## Redis守护进程：
+
 - 监听端口：`6379/tcp`
 - backlog（等待队列）
 - bind 127.0.0.1 172.16.100.6：监听地址
 
 - 同一主机建议：
-	+ unixsocket /tmp/redis.sock
-	+ unixsocketperm 700
+  - unixsocket /tmp/redis.sock
+  - unixsocketperm 700
 - timeout 0 超时功能
 - loglevel notice
 - logfile
 - database 16：默认使用一个数据库，这里可使用16个数据库
-	+ 集群只能使用一个
+  - 集群只能使用一个
 
 save 300 10 ： 300秒内发生10个记录修改，生成快照
 
