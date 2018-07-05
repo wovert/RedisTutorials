@@ -1,6 +1,7 @@
 # redis 介绍
 
 ## redis
+
 - k/v cache and store
   - in-memory
   - 持久化
@@ -189,13 +190,14 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 - digg
 
 ## redis 版本
-- 2015-4-1 Redis 3.0
-	+ redis Cluster
-	+ embedded string
-	+ LRU演算法的改进
 
+- 2015-4-1 Redis 3.0
+  - redis Cluster
+  - embedded string
+  - LRU演算法的改进
 
 ## redis 下载安装配置并启动服务程序
+
 [redis官网](http://redis.io/download)
 
 ### 1. 下载
@@ -204,7 +206,7 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 
 ### 2. 解压安装
 
-```
+``` shell
 # tar xvf redis-3.2.10.tar.gz && cd redis-3.2.10
 # make && make install
 ```
@@ -229,7 +231,7 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 
 ###　5. 启动服务，指定配置文件
 
-```
+``` shell
 # service redis start
 # redis-server /etc/redis.conf
 ```
@@ -267,10 +269,13 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 save 300 10 ： 300秒内发生10个记录修改，生成快照
 
 ## 打开数据库
-`select 1`
+
+`> select 1`
 
 ## 数据结构
+
 redis 是key-value的数据，所有每个数据都是一个键值对
+
 - 键的类型是字符串
 - 值的类型分为五种
 	+ 字符串 string
