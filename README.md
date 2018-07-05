@@ -171,13 +171,14 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 
 - RDBMS: Oracle, DB2, PostgreSQL, MySQL, SQL Server
 - NoSQL: Cassandra, HBase, Memcached, MongoDB, Redis
-	+ key-value NoSQL: Memcached, Redis, Tair
-	+ Column family NoSQL: Cassandra, HBase
-	+ Documentation NoSQL: MongoDB
-	+ Graph NoSQL: Neo4j
+  - key-value NoSQL: Memcached, Redis, Tair
+  - Column family NoSQL: Cassandra, HBase
+  - Documentation NoSQL: MongoDB
+  - Graph NoSQL: Neo4j
 - NewSQL: Aerospike, FoundationDB, RethinkDB
 
 ## redis　应用
+
 - weibo
 - zhihu
 - stackoverflow
@@ -278,37 +279,40 @@ redis 是key-value的数据，所有每个数据都是一个键值对
 
 - 键的类型是字符串
 - 值的类型分为五种
-	+ 字符串 string
-	+ 哈希 hash
-	+ 列表 list
-	+ 集合 set
-	+ 有序集合 zset
+  - 字符串 string
+  - 哈希 hash
+  - 列表 list
+  - 集合 set
+  - 有序集合 zset
 
-### String 
+### String
+
 - 最大能存储512MB数据
-- string类型是二进制安全的，既可以为任何数据，比如数字、图片、序列化对象等
+- string 类型是二进制安全的，既可以为任何数据，比如数字、文字、图片、序列化对象等
 
 - 连接 redis 服务器
-$ redis-cli 
-> ping
 
-- 设置键值
-set key value
+``` redis
+$ redis-cli
+> ping
+```
+
+- 设置键值: `set key value`
 
 - seconds: 过期时间，以秒为单位。没有过期时间就永久存储
-setex key seconds value
+
+`setex key seconds value`
 
 - 设置多个值
-MSET key value [key value ...]
+
+`MSET key value [key value ...]`
 
 > set 'name' 'cgw'
 
-- 获取值
-GET key
+- 获取值: `GET key`
 没有：(nil)
 
-- mget key1 key2
-
+`mget key1 key2`
 
 - 运算
 	+ 值是数字
