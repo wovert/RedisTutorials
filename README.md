@@ -410,9 +410,8 @@ $ redis-cli
 	+ 移除并返回存于 key 的 list 的最后一个元素
 		* rpop key
 
-	
-
-`help set`
+```
+help set
 `set key value [EX seconds] [NX|XX]`
 `SET disto fedora` 设置
 `GET disto` 获取
@@ -427,6 +426,7 @@ $ redis-cli
 `exists count`
 
 ### lists
+
 - lpush
 - rpush
 - lpop
@@ -442,12 +442,14 @@ $ redis-cli
 - sismeb
 
 ### Sorted sets
+
 - zadd
 - zrange
 - zcard
 - zrank
 
 ### hashes
+
 - hset
 - hsetnx
 - hget
@@ -455,4 +457,4 @@ $ redis-cli
 - hvals
 - hdel
 
-
+[分布式缓存redis](http://blog.oldboyedu.com/ops-cache/)
