@@ -398,13 +398,62 @@ ping
 
 save 300 10 ： 300秒内发生10个记录修改，生成快照
 
-### 打开数据库
+## Redis API
 
-`> select 1`
+### 通用命令
+```
+打开数据库
+> select 1
 
-## 数据结构
+遍历所有键
+> keys *
 
-redis 是key-value的数据，所有每个数据都是一个键值对
+> mset hello world hi haha php good
+> keys he*
+> keys he[k-z]*
+> keys ph?
+
+计算键的总数
+>dbsize 
+>sadd myset a b c d ef
+
+是否存在age键名:返回 0 | 1
+>exists key age
+
+删除指定key-value
+> del key age
+
+设置过期时间
+>expire key seconds
+
+查看key剩余过期时间
+> ttl key
+
+去掉key的过期时间
+> persis key
+
+查看数据类型
+> type key
+-2 表示key已经不存在了
+
+> persis hello
+> ttl hello
+-1 表示key存在，并且没有过期时间
+```
+
+`keys` 命令一般不再生产环境使用
+
+- 时间复杂度
+  - keys : O(n)
+  - dbsize : O(1)
+  - del : O(1)
+  - exists : O(1)
+  - expire : O(1)
+  - type : O(1)
+
+### 数据结构
+
+> redis 是key-value的数据，所有每个数据都是一个键值对
 
 - 键的类型是字符串
 - 值的类型分为五种
@@ -414,14 +463,14 @@ redis 是key-value的数据，所有每个数据都是一个键值对
   - 集合 set
   - 有序集合 zset
 
-### String
+### sring 字符窜类型
 
 - 最大能存储512MB数据
 - string 类型是二进制安全的，既可以为任何数据，比如数字、文字、图片、序列化对象等
 
 - 连接 redis 服务器
 
-``` redis
+```
 $ redis-cli
 > ping
 ```
@@ -470,7 +519,7 @@ $ redis-cli
 	+ 查看有效时间
 		* ttl key
 
-### hash
+### hash 哈希类型
 > 用于存储对象，对象的格式为键值对
 {name:'cg',age:20}
 
@@ -511,7 +560,7 @@ $ redis-cli
 	+ 返回值的字符串长度
 		* hstrlen key field 	
 
-### list
+### list 列表类型
 - 列表的元素类型为string
 - 按照插入顺序排序
 - 在列表的头部或者尾部添加元素
@@ -553,6 +602,7 @@ help set
 `SETNX bar gentoo XX` xx存在时设置
 `SETNX count 0`
 `exists count`
+```
 
 ### lists
 
@@ -563,14 +613,14 @@ help set
 - lindex
 - lset
 
-### sets
+### sets 集合类型
 - sadd
 - sinter
 - sunion
 - spop
 - sismeb
 
-### Sorted sets
+### Sorted sets 有序集合类型
 
 - zadd
 - zrange
