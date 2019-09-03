@@ -463,63 +463,135 @@ save 300 10 ： 300秒内发生10个记录修改，生成快照
   - 集合 set
   - 有序集合 zset
 
-### sring 字符窜类型
+#### 数据结构与内部编码
 
-- 最大能存储512MB数据
+- key
+  - string(数据结构)
+    - raw(内部编码)
+	- int
+	- embstr
+  - hash
+    - hashtable
+	- ziplist
+  - list
+    - linkedlist
+	- ziplist
+  - set
+    - hashtable
+	- intset
+  - zset
+    - skiplist
+	- ziplist
+
+#### redisObject
+
+![RedisObject](./imgs/redisObject.png)
+
+#### sring 字符窜类型
+
+> key value
+
+- value最大能存储**512MB**数据
 - string 类型是二进制安全的，既可以为任何数据，比如数字、文字、图片、序列化对象等
 
-- 连接 redis 服务器
+- 场景
+  - 缓存
+  - 计数器
+  - 分布式锁
 
-```
-$ redis-cli
-> ping
-```
-
-- 设置键值: `set key value`
-
-- seconds: 过期时间，以秒为单位。没有过期时间就永久存储
-
-`setex key seconds value`
-
+- 设置键值: O(1)
+  - `set key value`
+  - `seconds`: 过期时间，以秒为单位。没有过期时间就永久存储
+  - `setex key seconds value`
 - 设置多个值
+  - `mset key value [key value ...]` **O(n)**
+- 获取值: O(1) 
+  - `get key` 没有：(nil)
+  - `mget key1 key2` 批量获取key，原子操作， **O(n)**
 
-`MSET key value [key value ...]`
+![n次get](./imgs/mget.png)
+![1次mget](./imgs/mget2.png)
 
-> set 'name' 'cgw'
-
-- 获取值: `GET key`
-没有：(nil)
-
-`mget key1 key2`
-
+- 删除键： O(1)
+  - `del key`
 - 运算
 	+ 值是数字
 	+ 将 key 对应的 value 加1
 
-	+ INCR key 
-	+ INCR key increment
-	+ DECR key
-	+ DECRBY key decrement
+	+ `incr key` #key自增1，如果key不存在，自增后get(key)=1, O(1)
+	+ `decr key` #key自减1，如果key不存在，自减后get(key)=k, O(1)
+	+ `incrby key k` #key自增k，如果key不存在，自增后get(key)=k, O(1)
+	+ `decrby key k`
 
 - 其他
-	+ append key value 追加
-	+ strlen key 字符长度
+  - `getset key newvalue` #set key newvalue并且返回旧的value **O(1)**
+	- `append key value` #将value追加到就得value **O(1)**
+	- `strlen key` #返回字符长度（注意中文）**O(1)** 中文两个字节
+	- `incrbyfloat key 3.3` #增加key对应的值3.5, **O(1)**
+  - `getrange key start end` #获取字符串指定下标所有的值**O(1)**
+  - `setrange key index value` #设置指定下标所有对应的值**O(1)**
 
-- 键的命令
-	+ keys * 所有的键盘
-	+ keys '*1*' 包含1的键名
-	+ exists key [key ...] 是否存在，存在返回1，否则返回0
+```
+incr counter
+incrbyfloat counter 1.1
+2.1
+get counter
+"2.1"
+set hello javabest
+getrange hello 0 2
+"jav"
+setrange hello 4 p
+8
+get hello
+javapest
+```
+
+- 键的命令 **O(1)**
+	+ `keys *` 所有的键盘
+	+ `keys '*1*'` 包含1的键名
+	+ `exists key [key ...]` 是否存在，存在返回1，否则返回0
 	+ 查看对应的 value 的类型
-		* type key
+		* `type key`
 	+ 删除键及对应的值
-		* del key [key ...]
+		* `del key [key ...]`
 	+ 设置过期时间，以秒为单位
-		* expires key seconds
+		* `expires key seconds`
 		* 创建时没有设置过期时间，则一直存在，直到使用del 移除
 	+ 查看有效时间
-		* ttl key
+		* `ttl key`
 
-### hash 哈希类型
+- 记录网站每个用户个人主页的访问量？
+  - incr userid:pageview(单线程：无竞争)
+
+- 缓存视频的基本信息（数据源在MySQL中）伪代码
+
+![cache](./imgs/cache.png)
+
+```
+public VideoInfo get(long id) {
+	String redisKey = redisPrefix + id;
+	VideoInfo videoInfo = redis.get(redisKey);
+	if (videoInfo == null) {
+		videoInfo = mysql.get(id);
+		if (videoInfo != null) {
+			// 序列化
+			redis.set(redisKey, serialize(videoInfo));
+		}
+	}
+	return videoInfo;
+}
+```
+
+![分布式ID生成器](./imgs/micro-service.png)
+
+`incr id`(原子操作)
+
+- `set key vlaue` #不管key是否存在，都设置
+- `setnx key value` #key不存在，才设置
+- `set key value xx` #key存在，才设置
+
+#### hash 哈希类型
+
 > 用于存储对象，对象的格式为键值对
 {name:'cg',age:20}
 
@@ -560,7 +632,105 @@ $ redis-cli
 	+ 返回值的字符串长度
 		* hstrlen key field 	
 
-### list 列表类型
+- `hset key field value` 设置hash key对应的field的value **O(1)**
+- `hsetnx`
+- `hget key filed` 获取hash key对应的field的value, **O(1)**
+- `hkeys`
+- hvals
+- `hdel key field` 删除hash key对应field的value **O(1)**
+- `hexists key field` 判断hash key是否有field **O(1)**
+- `hlen key` 获取hash key field的数量 **O(1)**
+- `hmget key field1 filed2... fieldN` 批量获取hash key的一批field对应的值 **O(n)**
+- `hmset field1 value1 field2 value2 fieldN valueN` 批量设置 hash key的一批 field value
+
+- `hgetall key` 返回hash key对应所有的field和value **O(n)**
+- `hvals key` 返回hash key对应所有field的value **O(n)**
+- `hkeys key` 返回hash key对应所有field **O(n)**
+```
+hset user:1:info age 23
+hget user:1:info age
+23
+hset user:1:info name ronaldo
+hgetall user:1:info
+"age"
+"23"
+"name"
+"ronaldo"
+hdel user:1:info age
+
+hexists user:1:info name
+1
+hlen user:1:info
+2
+
+小心使用hgetall(牢记单线程)
+hgetall user:2:info
+hvals user:2:info
+hkeys user:2:info
+```
+
+记录网路每个用户个人主页的访问量？
+
+```
+hincrby user:1:info pageview count
+```
+
+缓存视频的基本信息（数据源在MySQL中）伪代码
+
+```
+public VideoInfo get(long id) {
+	String redisKey = redisPrefix + id;
+	Map<String,String> hashMap = redis.hgetAll(redisKey);
+	VideoInfo videoInfo = transferMapToVideo(hashMap);
+	if(videoInfo == null) {
+		videoInfo = mysql.get(id);
+		if (video != null) {
+			redis.hmset(redisKey, transferVideoToMap(videoInfo));
+		}
+	}
+	return videoInfo;
+}
+```
+
+
+
+![哈希键值结构](./imgs/hash.png)
+
+![哈希键值结构](./imgs/hash2.png)
+
+![哈希键值结构](./imgs/hash-key-value.png)
+
+Mapmap?
+
+Small redis
+
+field 不能相同，value可以相同
+
+
+#### string VS hash
+
+- get | hget
+- set setnx | hset hsetnx
+- del | hdel
+- incr incrby decr decrby | hincrby
+- mset | hmset
+- mget | hmget
+
+![用户信息(string实现)](./imgs/user1.png)
+
+![用户信息(string实现-v2)](./imgs/user2.png)
+
+![用户信息(hash)](./imgs/user3.png)
+
+![比较](./imgs/stringvshashcmp.png)
+
+
+
+
+
+
+
+#### list 列表类型
 - 列表的元素类型为string
 - 按照插入顺序排序
 - 在列表的头部或者尾部添加元素
@@ -604,7 +774,7 @@ help set
 `exists count`
 ```
 
-### lists
+#### lists
 
 - lpush
 - rpush
@@ -613,27 +783,43 @@ help set
 - lindex
 - lset
 
-### sets 集合类型
+#### sets 集合类型
 - sadd
 - sinter
 - sunion
 - spop
 - sismeb
 
-### Sorted sets 有序集合类型
+#### Sorted sets 有序集合类型
 
 - zadd
 - zrange
 - zcard
 - zrank
 
-### hashes
 
-- hset
-- hsetnx
-- hget
-- hkeys
-- hvals
-- hdel
 
 [分布式缓存redis](http://blog.oldboyedu.com/ops-cache/)
+
+## 单线程
+
+![单线程(./imgs/single-routine)
+
+### 单线程为什么这个快？
+
+1. 纯内存
+2. 非阻塞IO 
+3. 避免线程切换和竞态消耗
+
+![非阻塞](./imgs/nblock.png)
+
+1. 一次只运行一条命令
+2. 拒绝长（慢）命令 - keys, flushall, flushdb, slow lua script, mutil/exec, operate big value(collection)
+3. 其实不是单线程
+
+- fysnc file descriptor
+- close file descriptor
+
+
+
+
