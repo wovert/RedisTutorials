@@ -725,17 +725,53 @@ field 不能相同，value可以相同
 ![比较](./imgs/stringvshashcmp.png)
 
 
-
-
-
-
-
 #### list 列表类型
+
+![list1](./imgs/list1.png)
+
+![list2](./imgs/list2.png)
+
 - 列表的元素类型为string
 - 按照插入顺序排序
-- 在列表的头部或者尾部添加元素
+- 左右两边插入弹出
+  - 在列表的头部或者尾部添加或删除元素
+- 有序
+- 可以重复
 
-
+- api
+  - rpush
+    - `rpush key value1 value2 ... valueN`
+	  - 从列表右端插入值(1-N个)
+	  - O(1~n)
+	  - `rpush likekey c b a`
+  - lpush
+	- `lpush key value1 value2 ... valueN`	 
+  - linsert
+    - `linsert key before | after value new Value`
+	  - 在list指定的值前|后插入newValue
+      - O(n)
+	  - a - b - c - d
+	    - linsert listkey before b java
+	      - a - java - b - c - d
+		- linsert listkey after b php
+		  - a - b - php - c - d
+  - lpop
+    - `lpop key`	
+	  - 从列表左侧弹出一个item
+	    - o(1)
+	- `rpop key`
+  - lrem
+    - `lrem key count value`
+	  - 根据count值，从列表中删除所有value相等的项
+	    - 1.count>0, 从左到右，删除最多count个value相等的项
+		- 2.count<0, 从右到左，删除最多Math.abs(count)个value相等的项
+		- 3.count=0, 删除所有value相等的项
+	  - a c a c b f
+	    - `lrem listkey 0 a`
+		  - c c b f
+		    - `lrem listkey -1 c`
+		      - c b f
+  - ltrim
 - 设置
 	+ 在头部插入数据
 		* lpush key value [value ...]
