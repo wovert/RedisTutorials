@@ -772,6 +772,66 @@ field 不能相同，value可以相同
 		    - `lrem listkey -1 c`
 		      - c b f
   - ltrim
+    - ltrim key start end
+	  - 按照索引范围修剪列表
+	  - O(n)
+	  - a b c d e f
+	    - ltrim listkey 1 4
+		  -  b c d e
+		    - ltrim listkey 0 2
+		      - b c d
+  - lrange
+    - `lrange key start end` (包含end)
+	  - 获取列表指定索引范围所有item
+	  - O(n)
+	  - a b c d e f
+	    - 索引从左：0~5
+		- 索引从左：-1~-6
+		- lrange listkey 0 2
+		  - a b c
+		- lrange listkey 1 -1
+		  - b c d e f
+  - lindex
+    - lindex key index
+	  - 获取列表指定索引的item
+	  - a b c d e f
+	    - `lindex listkey 0` => a
+		- `lindex listkey -1` => f
+  - llen
+    - llen key
+	  - 获取列表长度
+	  - O(1)
+	  - a b c d e f 
+      - `llen listkey` => 6
+  - lset
+    - `lset key index newValue`
+	  - 设置列表指定索引值为 newValue
+	  - O(n)
+	  - a b c d e f
+	    - lset listkey 2 java
+	      - a b java d e f
+
+```
+rpush mylist a b c
+lrange listkey 0 -1
+lpush listkey 0
+lrange listkey 0 -1
+rpop listkey
+lrange listkey 0 -1
+```
+
+- blpop/brpop key timeout
+  - lpop/rpop阻塞版本，timeout是阻塞超时时间，timeout=0为永远不阻塞
+  - O(1)
+
+- tips
+  - lpush + lpop = stack
+  - lpush + rpop = queue
+  - lpush + ltrim = Capped Collection 固定数量列表
+  - lpush + brpop = Message Queue 消息队列
+
+![TimeLine](./imgs/list-example.png)
+
 - 设置
 	+ 在头部插入数据
 		* lpush key value [value ...]
