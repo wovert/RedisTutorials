@@ -120,18 +120,18 @@ Redis 将数据存储在内存里面，读写数据的都不会受到磁盘 I/O 
 
 ![in-memory](./imgs/redis-fow.jpg)
 
-10W OPS
+**10W OPS**
 
 - 数据存在哪 —— 内存
 - 什么语言写 —— C语言（50000 line）
 - 线程模型 —— 单线程
 
-- Register ^ Fast Small Expensive
+- Register(寄存器) ^ Fast Small Expensive
 - L1 Cache
 - L2 Cache
 - Main Memory
-- Local Disk
-- Remote Disk v Slow Big Cheap
+- Local Disk(本地硬盘)
+- Remote Disk(远程硬盘) v Slow Big Cheap
 
 
 |类型|每秒读写次数|随机读写延迟|访问带宽|
@@ -153,17 +153,25 @@ Redis 将数据存储在内存里面，读写数据的都不会受到磁盘 I/O 
 
 #### 4. 多种数据结构
 
-- strings/Blobs/Bitmaps(位图)
-- HyperLogLog: 超小内存唯一值计数
-- GEO：地理信息定位
-- Hash Tables(objects)
-- Linked Lists
-- Sets
-- Sorted Sets
+- 字符串：Strings
+  - Blobs
+  - 位图：Bitmaps
+- 哈希：Hash Tables(objects)
+- 列表：Linked Lists
+- 集合：Sets
+- 有序集合：Sorted Sets
+- 地理信息定位：GEO
+- HyperLogLog(2.8.19+): 超小内存唯一值计数(12K计算唯一值)
 
 #### 5. 支持多种客户端语言
 
-- Java/PHP/Python/Ruby/Lua/NodeJS
+- Java
+- PHP
+- Python
+- Ruby
+- Lua
+- NodeJS
+- Go
 
 #### 6. 简单
 
@@ -174,15 +182,15 @@ Redis 将数据存储在内存里面，读写数据的都不会受到磁盘 I/O 
 #### 7. 主从复制
 
 - 主服务器
-  - 从服务器（复制）
-  - 从服务器（复制）
+  - 复制到从服务器
+  - 复制到从服务器
 
 #### 8. 高可用和分布式
 
 - 高可用：Redis-Sentinel(v2.8) 支持高可用
 - 分布式：Redis-Cluter(v3.0) 支持分布式
 
-#### 6. 良好的支持
+#### 9. 良好的支持
 
 - antirez 非常勤奋，在每个版本都会不断地增加有用的新功能
   - 2.6 新增脚本功能，并为很多命令添加了多参数支持（比如 SADD、ZADD、等等）
@@ -197,7 +205,7 @@ Pivotal 公司雇佣 antirez 全力开发 Redis，无后顾之忧；这间公司
 
 阿里云、百度云、Amazon、REdisLab 等公司都提供了给予 Redis 的应用服务
 
-#### 7. 广泛的使用
+#### 10. 广泛的使用
 
 Twitter 使用 Redis 来存储用户时间轴（User timeline）
 
@@ -216,11 +224,11 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 ### Redis 典型应用场景
 
 - 缓存系统
-  - App Server ——> cache ——> Storage
+  - User ----访问----> App Server ——> **cache** ——> Storage
 - 计数器
   - 转化数、评论数
 - 消息队列系统
-  - Producer - Messages - Consumer
+  - Producer -> 多个Messages(消息队列) <-> Consumer
 - 排行榜
 - 社交网络
 - 实时系统
@@ -314,13 +322,15 @@ Github 使用 REdis 作为持久化的键值对数据库，并使用 Resque 来�
 
 # cat redis.conf | grep -v "#" | grep -v "^$" > redis-6382.conf
 # vim redis-6382.conf
-  daemonize yes
-  port 6382
-  dir "/data/redis/data"
-  logfile "6382.log"
+  daemonize yes 是否是守护进程
+  port 6382 对外端口
+  dir "/data/redis/data" 工作目录
+  logfile "6382.log" 系统日志
 
 # cp redis.conf /etc/
 ```
+
+Merz: 6379
 
 ####　5. 启动服务-指定配置文件
 
@@ -363,14 +373,14 @@ ping
 #### 8. redis客户端返回值
 
 ```sh
-状态恢复：10.10.10.10:6304> ping
-错误恢复：10.10.10.10:6304> hget hello field
+状态回复：10.10.10.10:6304> ping
+错误回：10.10.10.10:6304> hget hello field
   (error)...
-整数恢复：10.10.10.10:6404> incr hello
+整数回：10.10.10.10:6404> incr hello
   (integer) 1
 字符串回复：10.10.10.10:6304> get hello
   "world"
-多行字符串恢复：10.10.10.10:6304> get hello
+多行字符串回：10.10.10.10:6304> get hello
   1) "world"
   2) "bar"
 ```
@@ -912,9 +922,8 @@ help set
 1. 一次只运行一条命令
 2. 拒绝长（慢）命令 - keys, flushall, flushdb, slow lua script, mutil/exec, operate big value(collection)
 3. 其实不是单线程
-
-- fysnc file descriptor
-- close file descriptor
+  - fysnc file descriptor
+  - close file descriptor
 
 
 
