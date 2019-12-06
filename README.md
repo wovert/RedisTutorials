@@ -903,6 +903,267 @@ help set
 - zcard
 - zrank
 
+#### bit
+
+> 位图
+
+字符串big对应的二进制
+
+b(98)---------i----------g
+
+01100010 01101001 01100111
+
+```
+set hello big
+getbit hello 0 获取第一位位图值 0
+getbit hello 1 获取第一位位图值 1
+setbit hello 7 1
+(integer) 0
+get hello
+"cig"
+```
+
+
+
+```
+setbit key off value #给位图指定索引设置值
+
+> setbit unique:users:2016-04-05 0 1
+(integer) 0
+> setbit unique:users:2016-04-05 5 1
+(integer) 0
+> setbit unique:users:2016-04-05 11 1
+(integer) 0
+> setbit unique:users:2016-04-05 15 1
+(integer) 0
+> setbit unique:users:2016-04-05 19 1
+
+10000 1 00 00 0 1 0   0  0  1  0  0  0  1
+01234 5 67 8910 11 12 13 14 15 16 17 18 19
+
+getbit key offset #获取位图指定索引的值
+>getbit unique:users:2016-04-05 8
+(integer) 0
+>getbit unique:users:2016-04-05 19
+(integer) 1
+
+bitcount key [start end]
+# 获取位图指定范围（start到end），单位为字节，如果不指定就是获取全部）位值为1的个数
+
+>bitcount unique:users:2016-04-06
+(integer) 5 #有5个唯一的1
+>bitcount unique:users:2016-04-05 1 3
+(integer) 3 #第一个字节到第三个字节间的唯一的1
+
+bitop
+bitop op destkey key [key...]
+做多个Bitmap的and(交集)，or(并集), not(非), xor(异或)
+操作并将结果保存在destkey中
+
+#求两个位图的并集
+>bitop and unique:users:and:2016_04_04-2016_04_05 unique:users:2016-04-05 unique:users:2016-04-04
+(integer) 3
+> bitcount unique:users:and:2016_04_04-2016_04_05
+(integer) 2
+
+bitpos
+bitpos key targetBit [start] [end]
+计算位图指定范围(start到end, 单位为字节，如果不指定就是获取全部)第一个偏移量对应的值等于targetBit的位置
+
+> bitpos unique:users:2016-04-04 1
+(integer) 1
+> bitpos unique:users:2016-04-04 0 1 2
+(integer) 8
+```
+
+#### 独立用户统计
+
+1. 使用 set 和 Bitmap
+2. 1亿用户，5千万独立
+
+| 数据类型 | 每个userid占用空间 | 需要存储的用户量 | 全部内存量 |
+| -- | -- | --| -- |
+| set | 32位(4byte, 假设userid用的是整型，实际很多网站用的是长整型) | 50,000,000 | 32位 * 50,000,000=200MB  |
+| Bitmap | 1位 | 100,000,000 | 1位 * 100,000,000=12.5MB  |
+
+userid:10000, 给索引10000位置加上1
+
+| | 1天 | 1个月 | 1年 |
+| -- | -- | --| -- |
+| set | 200M | 6G | 72G  |
+| Bitmap | 12.5M | 375M | 4.5G  |
+
+
+#### 只有10完独立用户
+
+| 数据类型 | 每个userid占用空间 | 需要存储的用户量 | 全部内存量 |
+| -- | -- | --| -- |
+| set | 32位(4byte, 假设userid用的是整型，实际很多网站用的是长整型) | 1,000,000 | 32位 * 1,000,000=4MB  |
+| Bitmap | 1位 | 100,000,000 | 1位 * 100,000,000=12.5MB  |
+
+#### 使用经验
+
+1. Bitmap的type=string, 最大512MB
+2. 注意setbit时的偏移量，可能有较大耗时
+3. 位图不是绝对好
+
+
+#### HyperLogLog
+
+> 基于HyperLogLog算法：极小空间完成独立数量统计；本质还是字符串
+
+
+```
+> type hyperloglog_key
+string
+```
+
+- 三个命令
+
+1. `pfadd key element [element ...]` : 向hyperloglog添加元素
+2. `pfcount key [key ...]` : 计算hyperloglog的独立总数
+3. `pfmerge destkey sourcekey [sourcekey ...]` : 合并多个hyperloglog
+
+
+独立id统计
+```
+redis> pfadd 2017_03_06:unique:ids "uuid-1" "uuid-2" "uuid-3" "uuid-4"
+(integer) 1
+
+# 独立用户统计
+redis> pfcount 2017_03_06:unique:ids
+(integer) 4
+
+# 添加uuid
+redis> pfadd 2017_03_06:unique:ids "uuid-1" "uuid-2" "uuid-3" "uuid-90"
+(integer)1
+redis> pfcount 2017_03_06:unique:ids
+(integer) 5
+
+
+redis> pfadd 2017_03_06:unique:ids "uuid-1" "uuid-2" "uuid-3" "uuid-4"
+(integer) 1
+redis> pfcount 2016_03_06:unique:ids
+(integer) 4
+redis> pfadd 2016_03_05:unique:ids "uuid-4" "uuid-5" "uuid-6" "uuid-7"
+(integer) 1
+redis> pfcount 2016_03_05:unique:ids
+(integer) 4
+redis> pfmerge 2016_03_05_06:unique:ids 2016_03_05:unique:ids 2016_03_06:unique:ids
+OK
+redis> pfcount 2016_03_05_06:unique:ids
+```
+
+#### 内存消耗（百万独立用户）
+
+```
+elements=""
+key="2016_05_01:unique:ids"
+for i in `seq 1 1000000`
+do
+  elements="${elements} uuid-"${i}
+  if [[ $((i%1000)) == 0 ]]
+  then
+    redis-cli pfadd ${key} ${elements}
+	elements=""
+  fi
+done
+```
+
+- 内存消耗
+  - 1天：15KB
+  - 一个月：450KB
+  - 1年：15KB*365=5MB
+
+#### 使用经验
+
+1. 是否容忍错误（错误率：0.81%）
+
+- 取不到具体用户
+```
+pfcount 2016_05_01:unique:ids(integer)
+10009838
+```
+
+2. 是否需要单条数据
+
+#### GEO
+
+> 地理信息定位，存储经纬度，计算两地距离，范围计算等
+
+redis-3.2+支持
+
+- 北京：116.29(经度), 39.55
+- 天津：117.12, 39.08
+
+- 5个城市的经纬度
+
+|城市|经度|纬度|简称|
+|--|--|--|--|
+|北京|116.28|39.55|bejing|
+|天津|117.12|39.08|tianjin|
+|石家庄|114.29|39.02|shijiazhuang|
+|唐山|118.01|39.38|tangshan|
+|保定|115.29|38.51|baoding|
+
+```
+geo key longitude latitude member
+[longitude latitude member ...]
+#增加地理位置信息
+
+> geoadd cities:locations 116.28 39.55 bejing
+(integer) 1
+> geoadd cities:locations 116.28 39.55 bejing
+(integer) 1
+> geoadd cities:locations 117.12 39.08 tianjin
+114.29 38.02 shijiazhuang 118.01 39.38 tangshang 115.29 38.51 baoding
+(integer) 4
+
+geoops key member [member ...]
+#后去地理位置信息
+> geopos cities:locations tianjin
+1) 1) "117.12000042200088501"
+   2) "39.0800000535766543"
+
+
+geodist key member1 member2 [unit]
+#获取两个地理位置的距离
+#unit: m(米) km(千米), mi(英里), ft(尺)
+
+> geodist cities:locations tianjin beijing km
+天津和北京的公里数
+"89.2061"
+
+georadius 获取指定范围内的用户数量
+georadius key longtitude latitude radiusm|km|ft|mi [withcoord] [withdist] [withhash] [COUNT count] [asc|desc] [store key] [storedist key]
+
+
+georadiusbymember key member radiusm|km|ft|mi [withcoord] [withdist] [withhash] [COUNT count] [asc|desc] [store key] [storedist key]
+# 获取指定位置范围内的地理位置信息集合
+
+withcoord: 返回结果中包含经纬度
+withdis: 返回结果中包含距离市中心节点位置
+withhash: 返回结果中包含geohash
+COUNT count: 指定范围结果的数量
+asc|desc: 返回结果按照距离中心节点的距离做生序或者降序
+store key: 将返回结果的地理位置信息保存到指定键
+storedist key: 将返回结果距离中心节点的距离保存到指定键
+```
+
+距离北京150公里内的城市
+```
+> georadiusbymember cities:locations beijing 150km
+1) "beijing"
+2) "tianjin"
+3) "tangshang"
+4) "baoding"
+```
+
+1. since 3.2+
+2. type geokey=zset
+3. 没有删除API: `zrem key member`
+
+
 
 
 [分布式缓存redis](http://blog.oldboyedu.com/ops-cache/)
@@ -927,4 +1188,185 @@ help set
 
 
 
+## 慢查询
 
+### 声明周期
+
+![慢查询](./imgs/slow_query.jpg)
+
+1. 在执行命令的时候会产生慢查询
+2. 客户端超时不一定慢查询，但慢查询是客户端超时的一个可能因素（4个步骤都有能超时）
+
+### 两个配置
+
+- slowlog-max-len
+  - 1. 先进先出队列
+  - 2. 固定长度
+  - 3. 保存在内存内
+
+- slowlog-log-slower-than
+  - 1. 慢查询阀值（单位：微妙）
+  - 2. slowlog-log-slower-than=0，纪录所有命令
+  - 3. slowlog-log-slower-than<0，不纪录任何命令
+
+- 配置方法
+  - 1. 默认值
+    - config get slowlog-max-len = 128
+	- config get slowlog-log-slower-than = 10000
+  - 2. 修改配置文件重启
+  - 3. 动态配置
+    - config set slowlog-max-len 1000
+	- config set slowlog-log-slower-than 1000
+
+### 慢查询命令
+
+- `slowlog get [n]`: 获取慢查询队列
+- `slowlog len`: 获取慢查询队列长度
+- `slowlog reset`: 清空慢查询队列
+
+### 运维经验
+
+1. slowlog-max-len 不要设置过大，默认10ms，通常设置1ms; redis QPS 万级别
+2. slowlog-log-slower-than 不要设置过小，通常设置1000左右；
+3. 理解命令声明周期
+4. 定期持久化慢查询
+
+## pipeline
+
+![一次网络命令通信模型](./imgs/onetime.jpg)
+
+![批量网络命令通信模型](./imgs/nettimes.jpg)
+
+网络时间有变化
+
+### 什么是流水线
+
+![流水线](./imgs/pipeline.jpg)
+
+ 
+### 流水线的作用
+
+| 命令 ｜ N个命令操作 | 1次 pipeline(n个命令) ｜
+｜ -- ｜ -- ｜ -- ｜
+｜ 时间 ｜ n次网络+n次命令 ｜ 1次网络 + n次命令 ｜
+｜ 数据量 ｜ 1条命令 ｜ n条命令 ｜
+
+1. redis 的命令时间是微妙级别
+2. pipeline 每次条数要控制（网络）
+
+![流水线的例子](./imgs/pipeline-example.jpg)
+
+没有命令执行时间，只有传输时间
+
+### 客户端实现
+
+```java
+Jedis jedis = new Jedis("127.0.0.1", 6379);
+for (int i=0; i<10000; i++) {
+  jedis.hset("hashkey:" + i, "field" + i, "value" + i);
+}
+```
+1w hset => 50s
+
+```java
+Jedis jedis = new Jedis("127.0.0.1", 6379);
+for (int i=0; i<100; i++) {
+  Pipeline pipeline = jedis.pipelined();
+  for (int j=i*100; j<(i+1)*100; j++) {
+    pipeline.hset("hashkey:" + j, "field" + j, "value" + j);	  
+  } 
+  pipeline.syncAndReturnAll();
+}
+```
+1w hset => 0.7s
+
+### 与原生操作对比
+
+![原子操作](./imgs/yuanzi.jpg)
+
+![非原子操作](./imgs/yuanzi-pipeline.jpg)
+
+返回时按照顺序读取
+
+### 使用建议
+
+1. 注意每次pipeline携带数据量
+2. pipeline 每次只能作用在一个 Redis 节点上
+3. M操作与pipeline区别
+
+## 发布订阅
+
+### 角色
+
+- 发布者(publisher)
+- 订阅着(subscriber)
+- 频道(channel)
+
+### 通信模型
+
+![通信模型](./imgs/pub-sub.jpg)
+
+![通信模型](./imgs/pub-sub2.jpg)
+
+### API
+
+- publish(发布命令)
+- subscribe
+- unsubscribe
+- 其他
+
+#### publish(发布命令)
+
+`API: publish cahnnel message`
+
+```
+redis> publish sohu:tv "hello world"
+(integer) 3 #订阅着个数
+
+redis> publish sohu:auto "taxi"
+(integer)
+```
+
+#### subcribe(订阅)
+
+`API: subscribe [channel] #一个或多个`
+
+```
+redis> subscribe sohu:tv
+1) "subscribe"
+2) "sohu:tv"
+3) "(integer) 1"
+1) "message"
+2) "sohu:tv"
+3) "hello world"
+```
+
+#### unsubcribe(取消订阅)
+
+`API: unsubscribe [channel] #一个或多个`
+
+```
+redis> unsubscribe sohu:tv
+1) "unsubscribe"
+2) "sohu:tv"
+3) (integer) 0
+```
+
+#### 其他 API
+
+```
+psubscribe [pattern...] #订阅模式
+punsubscribe [pattern...] #退订指定的模式
+pubsub channels #列出至少有一个订阅者的频道
+pubsub numsub [cahnel...] #列出给定频道的订阅者数量
+```
+
+### 发布订阅与消息队列
+
+
+![消息队列](./imgs/msg-queue.jpg)
+
+
+1. 发布订阅模式中的角色
+2. 重要的 API
+3. 消息队列和发布订阅
