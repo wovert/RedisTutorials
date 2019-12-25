@@ -371,8 +371,9 @@ service命令启动
 
 ####　6. Redis客户端连接服务器
 
+--raw：显示中文
 ```bash
-# redis-cli
+# redis-cli --raw
 # redis-cli -h IP
 >help append
 >help @string
