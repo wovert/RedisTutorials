@@ -1458,3 +1458,128 @@ Background saving started
 | 复杂度 ｜ O(n) | O(n) |
 | 优点 ｜ 不会消耗额外内存 | 不阻塞客户端命令 |
 | 缺点 ｜ 阻塞客户端命令 | 需要fork,消耗内存 |
+
+
+#### 自动生成 RDB
+
+- 配置 ｜ seconds | changes
+- save | 900 | 1
+- save | 300 | 10
+- save | 60 | 10000
+
+60秒中改变10000条数据，自动生成RDB
+300秒中改变10条数据，自动生成RDB
+
+[自动生成RDB](./imgs/auto_rdb.png)
+
+```
+save 900 1
+save 300 10
+save 60 10000
+
+# rdb存储名称
+dbfilename dump.rdb
+
+# 存储目录
+dir ./
+
+# bgsave 出现了问题停止写入
+stop-writes-on-bgsave-error yes
+
+# rdb文件是否采用压缩格式
+rdbcompression yes
+
+# rdb检验和检验
+rdbchecksum yes
+```
+
+- 最佳配置
+
+```
+# 不自动保存
+# 机器多和时使用多个实例服务
+dbfilename dump-${port}.rdb
+dir /bigdiskpath
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+```
+
+#### 触发机制 - 不容忽略方式
+
+1. 全量复制
+2. debug reload
+3. shutdown
+
+#### 实验
+
+```sh
+# cd /usr/local/redis
+# mkdir data
+# mkdir config
+# cd config
+# cp ../etc/redis.conf  redis-6379.conf
+# vim redis-6379.conf
+daemonize yes
+pidfile /var/run/redis-6379.pid
+logfile "6379.log"
+#save 900 1
+#save 300 10
+#save 60 10000
+dbfilename dump-6379.rdb
+dir /usr/local/redis/data
+
+
+------- save阻塞 ----------
+
+# redis-server redis-6379.conf
+# redis-cli
+> dbsize
+(integer) 0
+> info memory
+used_memory_human:904.38M 使用了904.38内存
+> save
+
+打开另一个窗口
+# redis-cli
+> set name 123
+> get name
+阻塞...
+
+
+------- bgsave fork过程 ----------
+# redis-server redis-6379.conf
+# redis-cli
+> dbsize
+(integer) 0
+> info memory
+used_memory_human:904.38M 使用了904.38内存
+> bgsave
+
+打开另一个窗口
+# redis-cli
+> set name 123
+> get name
+非阻塞...
+
+# ps -aux | grep redis | grep -v "redis-cli" | grep -v "grep" && ls -l
+
+root     23555  4.0 16.8 507168 316836 ?       Ssl  16:32   0:58 redis-server 0.0.0.0:6379
+root     24123 69.0 16.7 507172 315612 ?       R    16:56   0:01 redis-rdb-bgsave 0.0.0.0:6379
+total 133980
+-rw-r--r-- 1 root root     2943 Jan  3 16:56 6379.log
+-rw-r--r-- 1 root root 99509557 Jan  3 16:54 dump-6379.rdb
+-rw-r--r-- 1 root root 37675012 Jan  3 16:56 temp-24123.rdb
+
+# ps -aux | grep redis | grep -v "redis-cli" | grep -v "grep" && ls -l
+
+root     23555  3.9 16.8 507168 316836 ?       Ssl  16:32   0:58 redis-server 0.0.0.0:6379
+total 97184
+-rw-r--r-- 1 root root     3149 Jan  3 16:56 6379.log
+-rw-r--r-- 1 root root 99509557 Jan  3 16:56 dump-6379.rdb
+
+
+# 真的自动
+
+# rdb 文件内容
+```
